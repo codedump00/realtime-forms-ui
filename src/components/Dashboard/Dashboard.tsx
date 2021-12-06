@@ -103,7 +103,8 @@ export default function Dashboard(props: Props) {
                         socket?.sendInputEvent({
                             formId: item.id,
                             type: "input",
-                            value
+                            value,
+                            user:props.username,
                         });
                     }
                 });
@@ -111,6 +112,7 @@ export default function Dashboard(props: Props) {
                     socket?.sendInputEvent({
                         formId: item.id,
                         type: "focus",
+                        user:props.username,
                     })
                 })
 
@@ -118,6 +120,7 @@ export default function Dashboard(props: Props) {
                     socket?.sendInputEvent({
                         formId: item.id,
                         type: "blur",
+                        user:props.username,
                     })
                 })
             })
@@ -125,6 +128,7 @@ export default function Dashboard(props: Props) {
                 socket?.leave()
             };
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.opportunityId, props.username, setEvents, setActiveUsers, setInputStates]);
 
     return (
