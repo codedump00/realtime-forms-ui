@@ -14,7 +14,7 @@ interface Props {
 
 export default function FormInput(props: Props) {
     const ref = useRef<any>();
-    const [value, setValue] = useState<any>();
+    const [value, setValue] = useState<any>(props.inputState?.value);
 
     const disabled = props.inputState && (props.inputState?.value !== undefined || props.inputState?.value !== null) && props.inputState?.type !== "blur";
     const focused = props.inputState !== null && props.inputState !== undefined && props.inputState?.type !== "blur";
