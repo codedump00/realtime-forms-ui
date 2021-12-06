@@ -57,7 +57,10 @@ export default function Dashboard(props: Props) {
                 console.log("onFocusInput", payload);
                 const element = (document.getElementById(payload.formId) as HTMLInputElement);
                 const usernameSpan = (document.getElementById(`name-span-${payload.formId}`) as HTMLSpanElement);
-
+                //@ts-ignore
+                const difference = Date.now()-payload.timestamp;
+                console.log(difference);
+                if(difference > 500) return;
                 if (payload.type === "blur") {
                     if (element && usernameSpan) {
                         element.blur();
@@ -67,6 +70,7 @@ export default function Dashboard(props: Props) {
                     }
 
                 } else if (payload.type === "focus") {
+                    console.log(payload)
                     if (element && usernameSpan) {
                         element.focus();
                         element.classList.add("focused");

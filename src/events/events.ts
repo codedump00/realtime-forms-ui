@@ -58,7 +58,10 @@ export class UserEvents {
 
     sendInputEvent(payload: IFormFocusPayload) {
         console.log("emitting ", payload);
-        this.socket?.emit("FORM_FOCUS", payload)
+        this.socket?.emit("FORM_FOCUS", {
+            ...payload,
+            timestamp: Date.now()
+        })
     }
 
     leave() {
