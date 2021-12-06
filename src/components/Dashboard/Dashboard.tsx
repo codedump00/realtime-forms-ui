@@ -60,7 +60,6 @@ export default function Dashboard(props: Props) {
                 //@ts-ignore
                 const difference = Date.now()-payload.timestamp;
                 console.log(difference);
-                if(difference > 500) return;
                 if (payload.type === "blur") {
                     if (element && usernameSpan) {
                         element.blur();
@@ -69,7 +68,7 @@ export default function Dashboard(props: Props) {
                         element.readOnly = false;
                     }
 
-                } else if (payload.type === "focus") {
+                } else if (difference < 500 && payload.type === "focus") {
                     console.log(payload)
                     if (element && usernameSpan) {
                         element.focus();
@@ -78,7 +77,7 @@ export default function Dashboard(props: Props) {
                         usernameSpan.innerText = payload.user as string;
                     }
 
-                } else if (payload.type === "input") {
+                } else if (difference < 500 && payload.type === "input") {
                     if (element && usernameSpan) {
                         element.value = payload.value as string;
                     }
