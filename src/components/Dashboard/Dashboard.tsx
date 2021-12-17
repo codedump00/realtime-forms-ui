@@ -1,8 +1,10 @@
-import React, { HTMLInputTypeAttribute, MouseEventHandler, useEffect, useLayoutEffect, useState } from "react";
-import { Col, Form, FormGroup, Input, Label, Row } from "reactstrap";
-import { config } from "../../configs/index.config";
-import { UserEvents } from "../../events/events";
+import React, {HTMLInputTypeAttribute, MouseEventHandler, useLayoutEffect, useState} from "react";
+import {Col, Form, Row} from "reactstrap";
+import {config} from "../../configs/index.config";
+import {IFormFocusPayload} from "../../data/interfaces";
+import {UserEvents} from "../../events/events";
 import Nav from "../App/Nav";
+import FormInput from "../Input/Input";
 import "./Dashboard.css";
 
 interface Props {
@@ -18,23 +20,26 @@ interface Props {
 
 export default function Dashboard(props: Props) {
     const [activeUsers, setActiveUsers] = useState<any[]>([]);
-
     const [events, setEvents] = useState<UserEvents>();
 
-    useEffect(() => {
+    useLayoutEffect(() => {
+        console.log("useEffect");
         if (!events) {
+            console.log("initializing events");
             const onConnect = async () => {
+                console.log("onConnect");
                 const response = await fetch(`${config.apiUrl}/active/${props.opportunityId}`, {
                     headers: {
                         "Access-Control-Allow-Origin": "*",
-                        "Content-Type": "applicantion/json"
+                        "Content-Type": "application/json"
                     }
                 });
-                const { users = [] } = await response.json();
+                const {users = []} = await response.json();
                 setActiveUsers(users);
             }
 
             const onJoin = (payload: string) => {
+                console.log("onJoin");
                 const isUserPresent = activeUsers.some(user => user === payload);
                 if (!isUserPresent) setActiveUsers((prevState) => {
                     return [...prevState, payload]
@@ -42,109 +47,177 @@ export default function Dashboard(props: Props) {
             }
 
             const onLeave = (payload: string) => {
+                console.log("onLeave");
                 setActiveUsers((prevUsers) => {
                     return prevUsers.filter(user => user !== payload)
                 })
             }
 
-            const socket = new UserEvents(props.opportunityId, props.username, onConnect, onJoin, onLeave);
+            const onFocusInput = (payload: IFormFocusPayload) => {
+                console.log("onFocusInput", payload);
+                const element = (document.getElementById(payload.formId) as HTMLInputElement);
+                const usernameSpan = (document.getElementById(`name-span-${payload.formId}`) as HTMLSpanElement);
+                //@ts-ignore
+                const difference = Date.now()-payload.timestamp;
+                console.log(difference);
+                if (payload.type === "blur") {
+                    if (element && usernameSpan) {
+                        element.blur();
+                        element.classList.remove("focused");
+                        usernameSpan.innerText = "";
+                        element.readOnly = false;
+                    }
+
+                } else if (difference < 500 && payload.type === "focus") {
+                    console.log(payload)
+                    if (element && usernameSpan) {
+                        element.focus();
+                        element.classList.add("focused");
+                        element.readOnly = true;
+                        usernameSpan.innerText = payload.user as string;
+                    }
+
+                } else if (difference < 500 && payload.type === "input") {
+                    if (element && usernameSpan) {
+                        element.value = payload.value as string;
+                    }
+                }
+            }
+
+            const socket = new UserEvents(props.opportunityId, props.username, onConnect, onJoin, onLeave, onFocusInput);
             setEvents(socket);
+            const data = Array.from(document.getElementsByClassName('dashboard-input'));
+
+            data.forEach((item) => {
+                item.addEventListener('keyup', (e: any) => {
+                    console.log("keyup");
+                    const value = e.target.value;
+
+                    if (value) {
+                        socket?.sendInputEvent({
+                            formId: item.id,
+                            type: "input",
+                            value,
+                            user:props.username,
+                        });
+                    }
+                });
+                item.addEventListener('focus', () => {
+                    socket?.sendInputEvent({
+                        formId: item.id,
+                        type: "focus",
+                        user:props.username,
+                    })
+                })
+
+                item.addEventListener('blur', () => {
+                    socket?.sendInputEvent({
+                        formId: item.id,
+                        type: "blur",
+                        user:props.username,
+                    })
+                })
+            })
             return () => {
                 socket?.leave()
             };
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.opportunityId, props.username, setEvents, setActiveUsers]);
-
-    useLayoutEffect(() => {
-        const data = Array.from(document.getElementsByClassName('dashboard-input'));
-
-        console.log(data);
-
-        data.forEach((item) => {
-            item.addEventListener('keyup', (e: any) => {
-                const value = e.target.value;
-
-                if (value) {
-                    events?.sendInputEvent({
-                        formId: item.id,
-                        type: "input",
-                        value
-                    });
-                }
-            });
-        })
-    });
 
     return (
         <>
             <div className="row">
-                <Nav users={activeUsers} events={events} />
+                <Nav users={activeUsers} events={events}/>
             </div>
             <h1>Welcome {props.username}</h1>
             <h2>Opportunity Id: {props.opportunityId}</h2>
             <Form className="dashboard-form">
                 <h1 className="text-center m-4">HLE Hackathon</h1>
                 <Row xs="2">
-                    <Col >
-                        <FormGroup>
-                            <Label for="firstName">First Name</Label>
-                            <Input
-                                id="firstName"
-                                name="firstName"
-                                placeholder="First Name"
-                                className="dashboard-input"
-                                required={true}
-                            />
-                        </FormGroup>
+                    <Col>
+                        <FormInput
+                            id="firstName"
+                            label="First Name"
+                            placeholder="First Name"
+                        />
                     </Col>
                     <Col>
-                        <FormGroup>
-                            <Label for="lastName">Last Name</Label>
-                            <Input
-                                id="lastName"
-                                name="lastName"
-                                placeholder="Last Name"
-                                className="dashboard-input"
-                                required={true}
-                            />
-                        </FormGroup>
+                        <FormInput
+                            id="lastName"
+                            placeholder="Last Name"
+                            label="Last Name"
+                        />
                     </Col>
                     <Col>
-                        <FormGroup>
-                            <Label for="email">Email</Label>
-                            <Input
-                                id="email"
-                                name="email"
-                                placeholder="Email"
-                                className="dashboard-input"
-                                type="email"
-                                required={true}
-                            />
-                        </FormGroup>
+                        <FormInput
+                            id="email"
+                            placeholder="Email"
+                            label="Email"
+                        />
                     </Col>
                     <Col>
-                        <FormGroup>
-                            <Label for="contactNumber">Contact Number</Label>
-                            <Input
-                                id="contactNumber"
-                                name="contactNumber"
-                                placeholder="Contact Number"
-                                className="dashboard-input"
-                                required={true}
-                            />
-                        </FormGroup>
+                        <FormInput
+                            id="contactNumber"
+                            placeholder="Contact Number"
+                            label="Contact Number"
+                        />
                     </Col>
                     <Col>
-                        <FormGroup>
-                            <Label for="address">Address</Label>
-                            <Input
-                                id="address"
-                                name="email"
-                                placeholder="Address"
-                                className="dashboard-input"
-                                required={true}
-                            />
-                        </FormGroup>
+                        <FormInput
+                            id="address"
+                            placeholder="Address"
+                            label="Address"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input1"
+                            placeholder="Input 1"
+                            label="Input 1"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input2 "
+                            placeholder="Input 2"
+                            label="Input 2"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input3"
+                            placeholder="Input 3"
+                            label="Input 3"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input4"
+                            placeholder="Input 4"
+                            label="Input 4"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input5"
+                            placeholder="Input 5"
+                            label="Input 5"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input6"
+                            placeholder="Input 6"
+                            label="Input 6"
+                        />
+                    </Col>
+                    <Col>
+                        <FormInput
+                            id="input7"
+                            placeholder="Input 7"
+                            label="Input 7"
+                        />
                     </Col>
                 </Row>
             </Form>
